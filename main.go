@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"github.com/fufuok/favicon"
+	"github.com/getlantern/systray"
 	"github.com/gin-gonic/gin"
 	"io"
 	"log"
@@ -25,12 +26,19 @@ var favData []byte
 
 var ffmpegApp string
 
+var osType = runtime.GOOS
+
 func main() {
 	// 非调试模式
 	gin.SetMode(gin.ReleaseMode)
 
+	systray.Run(onReady, onExit)
+
+}
+
+func appCore() {
 	//判断系统
-	if runtime.GOOS == "windows" {
+	if osType == "windows" {
 		ffmpegApp = "./ffmpeg.exe"
 	} else {
 		ffmpegApp = "ffmpeg"
@@ -131,4 +139,25 @@ func loadConfig(filename string) (*Config, error) {
 		return nil, err
 	}
 	return config, nil
+}
+
+func onReady() {
+
+	systray.SetIcon(favData)
+	systray.SetTitle("convertM3U8ToMP3")
+	systray.SetTooltip("convertM3U8ToMP3")
+
+	mQuit := systray.AddMenuItem("退出", "")
+
+	log.Printf("[systray] app starting! ^_^")
+	// Sets the icon of a menu item. Only available on Mac and Windows.
+	//mQuit.SetIcon(icon.Data)
+
+	//监听点击"退出"按钮
+	go func() {
+		<-mQuit.ClickedCh
+		systray.Quit()
+	}()
+
+	appCore()
 }

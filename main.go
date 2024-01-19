@@ -96,7 +96,10 @@ func loadConfig(filename string) (*Config, error) {
 	file, err := os.Open(filename)
 	//file, err := os.OpenFile(filename, os.O_CREATE, 0)
 	if err != nil {
+		log.Printf("[loadConfig] Config file not found! T_T")
+
 		os.Create(filename)
+
 		content := `{
   "ipPort": "24748",
   "ffmpegPath": "` + ffmpegApp + `",
@@ -112,13 +115,18 @@ func loadConfig(filename string) (*Config, error) {
   }
 }`
 		os.WriteFile(filename, []byte(content), 0666)
-		return nil, err
+
+		log.Printf("[loadConfig] %s", "Retrying load config")
+		config, err := loadConfig(filename)
+
+		return config, err
 	}
 	defer file.Close()
 
 	config := &Config{}
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(config)
+
 	if err != nil {
 		return nil, err
 	}

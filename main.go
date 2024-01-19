@@ -10,8 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
-	"syscall"
+	"runtime"
 	"time"
 )
 
@@ -24,9 +23,18 @@ type Config struct {
 //go:embed favicon.ico
 var favData []byte
 
+var ffmpegApp string
+
 func main() {
 	// 非调试模式
 	gin.SetMode(gin.ReleaseMode)
+
+	//判断系统
+	if runtime.GOOS == "windows" {
+		ffmpegApp = "./ffmpeg.exe"
+	} else {
+		ffmpegApp = "ffmpeg"
+	}
 
 	config, _ := loadConfig("./config.json")
 
@@ -91,7 +99,7 @@ func loadConfig(filename string) (*Config, error) {
 		os.Create(filename)
 		content := `{
   "ipPort": "24748",
-  "ffmpegPath": "./ffmpeg",
+  "ffmpegPath": "` + ffmpegApp + `",
   "Streams": {
     "广东羊城交通台": "http://ls.qingting.fm/live/1262/64k.m3u8?format=aac",
     "广东广播电视台股市广播": "http://ls.qingting.fm/live/4847/64k.m3u8?format=aac",

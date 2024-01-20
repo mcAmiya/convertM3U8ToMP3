@@ -161,3 +161,9 @@ func onReady() {
 
 	appCore()
 }
+
+func onExit() {
+	// clean up here
+	log.Printf("[systray] app quited! ^_^")
+	os.Exit(130)
+}

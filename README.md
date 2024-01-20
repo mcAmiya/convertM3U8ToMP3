@@ -2,13 +2,12 @@
 <p align="center">
     <s>更方便</s>的转换m3u8电台到mp3流
     <br />
-    Version: 2023/8/20
+    Version: 2024/1/20
     <!-- <a href="https://music.qier222.com" target="blank"><strong>🌎 访问DEMO</strong></a>  |  
     <a href="#%EF%B8%8F-安装" target="blank"><strong>📦️ 下载安装包</strong></a>  |  
     <a href="https://t.me/yesplaymusic" target="blank"><strong>💬 加入交流群</strong></a>
     <br />
     <br /> -->
-  </p>
 </p>
 
 ## ✨ 特性
@@ -20,6 +19,7 @@
 - ✔️ 可以支持所有m3u8音频转换
 - 📻 支持在欧卡2中使用
 - 🖥️ 无UI界面 无感转换
+- 📔 托盘程序 告别任务管理器
 
 ## 📦️ 打包
 
@@ -37,8 +37,7 @@ go build
 
 ## ☑️ Todo
 
-1. 添加到托盘，可以自行选择是否退出程序（不必使用任务管理器）
-2. 可以在软件中设置开机自启不必去`shell:Common Startup`
+1. 可以在软件中设置开机自启不必去`shell:Common Startup`
 
 欢迎提 Issue 和 Pull request。
 

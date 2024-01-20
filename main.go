@@ -59,7 +59,7 @@ func appCore() {
 	}))
 
 	r.GET("/", func(context *gin.Context) {
-		context.String(http.StatusOK, "Server Run Successful!\nVersion:2023/8/20")
+		context.String(http.StatusOK, "Server Run Successful!\nVersion:2024/1/20")
 	})
 
 	r.GET("/:streamID", func(c *gin.Context) {

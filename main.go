@@ -4,16 +4,216 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
-	"github.com/fufuok/favicon"
-	"github.com/getlantern/systray"
-	"github.com/gin-gonic/gin"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"runtime"
 	"time"
+
+	"github.com/fufuok/favicon"
+	"github.com/getlantern/systray"
+	"github.com/gin-gonic/gin"
+
+	"context"
+	"sync"
+	"syscall"
 )
+
+// BroadcastStream 广播流管理器 - 用于将单个 ffmpeg 输出分发给多个客户端
+type BroadcastStream struct {
+	readers  map[chan []byte]bool
+	mutex    sync.RWMutex
+	cmd      *exec.Cmd
+	ctx      context.Context
+	cancel   context.CancelFunc
+	refCount int
+	mu       sync.Mutex
+}
+
+func NewBroadcastStream(m3u8URL, ffmpegPath string) (*BroadcastStream, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// 启动 ffmpeg 进程
+	cmd := exec.Command(ffmpegPath, "-i", m3u8URL, "-f", "mp3", "-")
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	}
+	cmd.Stderr = os.Stderr
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+
+	if err := cmd.Start(); err != nil {
+		cancel()
+		return nil, err
+	}
+
+	bs := &BroadcastStream{
+		readers: make(map[chan []byte]bool),
+		ctx:     ctx,
+		cancel:  cancel,
+		cmd:     cmd,
+	}
+
+	// 启动广播协程
+	go bs.broadcast(stdout)
+
+	return bs, nil
+}
+
+func (bs *BroadcastStream) broadcast(reader io.Reader) {
+	buffer := make([]byte, 32768) // 32KB buffer
+
+	for {
+		select {
+		case <-bs.ctx.Done():
+			return
+		default:
+			n, err := reader.Read(buffer)
+			if err != nil {
+				if err != io.EOF {
+					log.Printf("Broadcast error: %v", err)
+				}
+				break
+			}
+
+			data := make([]byte, n)
+			copy(data, buffer[:n])
+
+			bs.mutex.RLock()
+			for ch := range bs.readers {
+				select {
+				case ch <- data:
+				case <-time.After(100 * time.Millisecond): // 防止阻塞
+					// 客户端读取太慢，跳过
+				}
+			}
+			bs.mutex.RUnlock()
+		}
+	}
+}
+
+func (bs *BroadcastStream) AddReader() chan []byte {
+	bs.mutex.Lock()
+	defer bs.mutex.Unlock()
+
+	ch := make(chan []byte, 100) // 带缓冲的通道
+	bs.readers[ch] = true
+
+	return ch
+}
+
+func (bs *BroadcastStream) RemoveReader(ch chan []byte) {
+	bs.mutex.Lock()
+	defer bs.mutex.Unlock()
+
+	if _, exists := bs.readers[ch]; exists {
+		delete(bs.readers, ch)
+		close(ch)
+	}
+}
+
+func (bs *BroadcastStream) Close() {
+	bs.cancel()
+	if bs.cmd != nil && bs.cmd.Process != nil {
+		err := bs.cmd.Process.Kill()
+		if err != nil {
+			return
+		}
+	}
+}
+
+// StreamManager 修改全局流管理器
+type StreamManager struct {
+	mutex   sync.RWMutex
+	streams map[string]*BroadcastStream
+}
+
+var streamManager = &StreamManager{
+	streams: make(map[string]*BroadcastStream),
+}
+
+func getOrCreateBroadcastStream(m3u8URL string, ffmpegPath string) (*BroadcastStream, func(), error) {
+	streamManager.mutex.Lock()
+
+	if stream, exists := streamManager.streams[m3u8URL]; exists {
+		// 流已存在，增加引用计数
+		stream.mu.Lock()
+		stream.refCount++
+		stream.mu.Unlock()
+
+		streamManager.mutex.Unlock()
+
+		cleanup := func() {
+			stream.mu.Lock()
+			stream.refCount--
+			currentRef := stream.refCount
+			stream.mu.Unlock()
+
+			if currentRef <= 0 {
+				// 没有更多引用时，清理流
+				go func() {
+					time.Sleep(5 * time.Second) // 延迟清理
+					streamManager.mutex.Lock()
+					stream.mu.Lock()
+					if stream.refCount <= 0 {
+						stream.Close()
+						delete(streamManager.streams, m3u8URL)
+					}
+					stream.mu.Unlock()
+					streamManager.mutex.Unlock()
+				}()
+			}
+		}
+
+		return stream, cleanup, nil
+	}
+
+	// 创建新的广播流
+	newStream, err := NewBroadcastStream(m3u8URL, ffmpegPath)
+	if err != nil {
+		streamManager.mutex.Unlock()
+		return nil, nil, err
+	}
+
+	newStream.refCount = 1
+	streamManager.streams[m3u8URL] = newStream
+	streamManager.mutex.Unlock()
+
+	cleanup := func() {
+		streamManager.mutex.Lock()
+		if stream, exists := streamManager.streams[m3u8URL]; exists {
+			stream.mu.Lock()
+			stream.refCount--
+			currentRef := stream.refCount
+			stream.mu.Unlock()
+
+			if currentRef <= 0 {
+				go func() {
+					time.Sleep(5 * time.Second)
+					streamManager.mutex.Lock()
+					if stream, exists := streamManager.streams[m3u8URL]; exists {
+						stream.mu.Lock()
+						if stream.refCount <= 0 {
+							stream.Close()
+							delete(streamManager.streams, m3u8URL)
+						}
+						stream.mu.Unlock()
+					}
+					streamManager.mutex.Unlock()
+				}()
+			}
+		}
+		streamManager.mutex.Unlock()
+	}
+
+	return newStream, cleanup, nil
+}
 
 type Config struct {
 	Streams    map[string]string `json:"Streams"`
@@ -76,20 +276,47 @@ func appCore() {
 			return
 		}
 
-		mp3Stream, ffmpegCmd, err := convertM3U8ToMP3(config.FfmpegPath, m3u8URL)
+		// 使用共享的广播流
+		broadcastStream, cleanup, err := getOrCreateBroadcastStream(m3u8URL, config.FfmpegPath)
 		if err != nil {
-			c.String(http.StatusInternalServerError, "Error converting M3U8 to MP3")
+			c.String(http.StatusInternalServerError, "Error creating stream")
 			return
 		}
-		defer func() {
-			// 等待一段时间，以确保进程有足够的时间完成任务并退出
-			time.Sleep(5 * time.Second) // 等待时间
-			ffmpegCmd.Process.Kill()
-		}()
+		defer cleanup()
+
+		// 为当前客户端创建一个读取通道
+		dataChan := broadcastStream.AddReader()
+		defer broadcastStream.RemoveReader(dataChan) // 类型现在匹配
 
 		c.Header("Content-Type", "audio/mpeg")
+		c.Header("Cache-Control", "no-cache")
+		c.Header("Connection", "close")
 		c.Status(http.StatusOK)
-		io.Copy(c.Writer, mp3Stream)
+
+		// 检测客户端断开连接
+		clientGone := c.Done()
+
+		// 流式传输数据
+		for {
+			select {
+			case data, ok := <-dataChan:
+				if !ok {
+					// 通道已关闭
+					return
+				}
+				_, err := c.Writer.Write(data)
+				if err != nil {
+					log.Printf("Write error: %v", err)
+					return
+				}
+				c.Writer.Flush() // 立即发送数据
+			case <-clientGone:
+				// 客户端断开连接
+				return
+			case <-time.After(30 * time.Second): // 30秒超时
+				return
+			}
+		}
 	})
 
 	log.Printf("[main] %s", "Main函数运行中")
@@ -106,7 +333,10 @@ func loadConfig(filename string) (*Config, error) {
 	if err != nil {
 		log.Printf("[loadConfig] Config file not found! T_T")
 
-		os.Create(filename)
+		_, err := os.Create(filename)
+		if err != nil {
+			return nil, err
+		}
 
 		content := `{
   "ipPort": "24748",
@@ -122,14 +352,22 @@ func loadConfig(filename string) (*Config, error) {
     "广州MYFM 88.0": "http://ls.qingting.fm/live/20194/64k.m3u8?format=aac"
   }
 }`
-		os.WriteFile(filename, []byte(content), 0666)
+		err = os.WriteFile(filename, []byte(content), 0666)
+		if err != nil {
+			return nil, err
+		}
 
 		log.Printf("[loadConfig] %s", "Retrying load config")
 		config, err := loadConfig(filename)
 
 		return config, err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
 
 	config := &Config{}
 	decoder := json.NewDecoder(file)

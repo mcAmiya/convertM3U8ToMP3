@@ -21,6 +21,9 @@ import (
 	"syscall"
 )
 
+// AppVersion 版本信息
+const AppVersion = "2025.12.24.1"
+
 // BroadcastStream 广播流管理器 - 用于将单个 ffmpeg 输出分发给多个客户端
 type BroadcastStream struct {
 	readers  map[chan []byte]bool
@@ -259,7 +262,7 @@ func appCore() {
 	}))
 
 	r.GET("/", func(context *gin.Context) {
-		context.String(http.StatusOK, "Server Run Successful!\nVersion:2024/1/20")
+		context.String(http.StatusOK, "Server Run Successful!\nVersion: "+AppVersion)
 	})
 
 	r.GET("/:streamID", func(c *gin.Context) {

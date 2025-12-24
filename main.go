@@ -326,7 +326,10 @@ func appCore() {
 	ipAddr := "localhost:" + config.IpPort
 	log.Printf("[main] IpAddress:http://%s/\n", ipAddr)
 
-	r.Run(":" + config.IpPort)
+	err := r.Run(":" + config.IpPort)
+	if err != nil {
+		return
+	}
 }
 
 func loadConfig(filename string) (*Config, error) {

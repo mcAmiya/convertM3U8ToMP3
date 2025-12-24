@@ -30,6 +30,9 @@
 ```shell
 # 打包
 go build
+
+# Windows下打包如果想没有黑窗口 要加上 -ldflags "-H windowsgui"
+go build -ldflags "-H windowsgui"
 ```
 
 ## 💻 运行

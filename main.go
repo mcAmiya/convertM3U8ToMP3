@@ -347,7 +347,6 @@ func loadConfig(filename string) (*Config, error) {
     "广东珠江经济电台": "http://ls.qingting.fm/live/1259/64k.m3u8?format=aac",
     "广东广播电视台文体广播": "http://ls.qingting.fm/live/471/64k.m3u8?format=aac",
     "广东音乐之声": "http://ls.qingting.fm/live/1260/64k.m3u8?format=aac",
-    "佛山电台FM906": "http://ls.qingting.fm/live/1264/64k.m3u8?format=aac",
     "番禺电台畅快1017": "http://ls.qingting.fm/live/20212427/64k.m3u8?format=aac",
     "广州MYFM 88.0": "http://ls.qingting.fm/live/20194/64k.m3u8?format=aac"
   }

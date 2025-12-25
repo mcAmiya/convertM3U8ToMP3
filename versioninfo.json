@@ -3,13 +3,13 @@
     "FileVersion": {
       "Major": 2025,
       "Minor": 12,
-      "Patch": 24,
+      "Patch": 25,
       "Build": 1
     },
     "ProductVersion": {
       "Major": 2025,
       "Minor": 12,
-      "Patch": 24,
+      "Patch": 25,
       "Build": 1
     },
     "FileFlagsMask": "3f",
@@ -22,14 +22,14 @@
     "Comments": "把m3u8流转成本地服务器的mp3流",
     "CompanyName": "Fer",
     "FileDescription": "convertM3U8ToMP3 - Amiya",
-    "FileVersion": "2025.12.24.1",
+    "FileVersion": "2025.12.25.1",
     "InternalName": "alpha",
     "LegalCopyright": "Copyright (c) 2021 Fer_Amiya",
     "LegalTrademarks": "",
     "OriginalFilename": "convertM3U8ToMP3",
     "PrivateBuild": "",
     "ProductName": "convertM3U8ToMP3",
-    "ProductVersion": "2025.12.24.1",
+    "ProductVersion": "2025.12.25.1",
     "SpecialBuild": ""
   },
   "VarFileInfo": {

@@ -21,7 +21,7 @@ import (
 )
 
 // AppVersion 版本信息
-const AppVersion = "2025.12.24.1"
+const AppVersion = "2025.12.25.1"
 
 // BroadcastStream 广播流管理器 - 用于将单个 ffmpeg 输出分发给多个客户端
 type BroadcastStream struct {

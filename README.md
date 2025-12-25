@@ -4,7 +4,7 @@
 <p align="center">
     <s>更方便</s>的转换m3u8电台到mp3流
     <br />
-    Version: 2025.12.24.1
+    Version: 2025.12.25.1
     <!-- <a href="https://music.qier222.com" target="blank"><strong>🌎 访问DEMO</strong></a>  |  
     <a href="#%EF%B8%8F-安装" target="blank"><strong>📦️ 下载安装包</strong></a>  |  
     <a href="https://t.me/yesplaymusic" target="blank"><strong>💬 加入交流群</strong></a>

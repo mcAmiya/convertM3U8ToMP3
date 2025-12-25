@@ -18,7 +18,6 @@ import (
 
 	"context"
 	"sync"
-	"syscall"
 )
 
 // AppVersion 版本信息
@@ -40,9 +39,10 @@ func NewBroadcastStream(m3u8URL, ffmpegPath string) (*BroadcastStream, error) {
 
 	// 启动 ffmpeg 进程
 	cmd := exec.Command(ffmpegPath, "-i", m3u8URL, "-f", "mp3", "-")
-	if runtime.GOOS == "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	}
+
+	// windows下 隐藏调用ffmpeg产生的黑窗口
+	winHiddenCMDFrom(cmd)
+
 	cmd.Stderr = os.Stderr
 
 	stdout, err := cmd.StdoutPipe()

@@ -339,11 +339,6 @@ func loadConfig(filename string) (*Config, error) {
 	if err != nil {
 		log.Printf("[loadConfig] Config file not found! T_T")
 
-		_, err := os.Create(filename)
-		if err != nil {
-			return nil, err
-		}
-
 		content := `{
   "ipPort": "24748",
   "ffmpegPath": "` + ffmpegApp + `",

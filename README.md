@@ -28,6 +28,9 @@
 - 🛠 直接 git clone 然后安装依赖打包即可
 
 ```shell
+# 安装goversioninfo以生成软件版本信息(可选 不要的话自行注释main.go第一行)
+go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+
 # 打包
 go build
 

@@ -32,6 +32,7 @@
 go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
 
 # 打包
+# 打包Linux版本的时候 不要留着resource.syso不然会出问题
 go build
 
 # Windows下打包如果想没有黑窗口 要加上 -ldflags "-H windowsgui"

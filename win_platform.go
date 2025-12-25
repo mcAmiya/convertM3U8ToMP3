@@ -7,6 +7,6 @@ import (
 	"syscall"
 )
 
-func winHiddenCMDFrom(cmd exec.Cmd) {
+func winHiddenCMDFrom(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 }
